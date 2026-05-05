@@ -422,7 +422,7 @@ func mustDeployDriver() {
 	if err != nil {
 		klog.Fatalf("Could not deploy driver: %v", err)
 	}
-	klog.Infof(string(out))
+	klog.Info(string(out))
 }
 
 func mustTearDownDriver(ctx context.Context) {
@@ -457,7 +457,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	if err := collectNodeCacheLabels(ctx); err != nil {
-		klog.Fatalf(err.Error())
+		klog.Fatal(err.Error())
 	}
 
 	mustDeployDriver()

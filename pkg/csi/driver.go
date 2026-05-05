@@ -36,6 +36,9 @@ type VolumeCreatorFunc func() (localvolume.LocalVolume, error)
 
 // Driver is the object backing the CSI driver. It also implements identity and node services, q.v.
 type Driver struct {
+	csi.UnimplementedIdentityServer
+	csi.NodeServer
+
 	client        *kubernetes.Clientset
 	endpoint      string
 	vol           localvolume.LocalVolume
