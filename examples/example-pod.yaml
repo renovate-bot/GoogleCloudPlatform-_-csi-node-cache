@@ -21,7 +21,7 @@ metadata:
 spec:
   terminationGracePeriodSeconds: 1
   nodeSelector:
-    node-cache.gke.io: tmpfs
+    node-cache.gke.io: pd
   containers:
   - name: debian
     image: debian

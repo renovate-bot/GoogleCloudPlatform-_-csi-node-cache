@@ -56,7 +56,7 @@ apply -f` will fail and leave your cluster in a broken state. If you
 accidentally do this, delete the `node-cache` namespace and retry.
 
 Note that the deployment ensures the controller runs on a node with workload
-identity, in case  the PD cache is used. If you will not be using the PD cache
+identity, in case the PD cache is used. If you will not be using the PD cache
 and you don't want to set up workload identity for your cluster, you can remove
 the controller node selector.
 
@@ -95,7 +95,9 @@ pending.
 
 Caches based on persistent disk are created with the `node-cache.gke.io` storage
 class, which may be customized as part of this deployment. Keep the volume
-binding mode as immediate, however, or volume creation will break.
+binding mode as immediate, however, or volume creation will break. In GKE
+clusters, a zone-specific version of the storage class will be created
+dynamically by the controller.
 
 The controller will create a PVC in order to provision the volume for a
 node. This PVC will be marked with a `node-cache.gke.io` finalizer and

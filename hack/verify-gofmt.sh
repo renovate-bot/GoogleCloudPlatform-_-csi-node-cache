@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-set -o errexit
 set -o nounset
 set -o pipefail
 
 echo "Verifying gofmt..."
 
 diff=$(find . -name "*.go" | grep -v "\/vendor\/" | xargs gofmt -s -d 2>&1)
-if [[ -n "${diff}" ]]; then
+if [ -n "${diff}" ]; then
   echo "${diff}"
   echo
   echo "Please run hack/update-gofmt.sh to fix the issue(s)"
