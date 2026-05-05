@@ -22,6 +22,7 @@ import (
 
 	"google.golang.org/api/compute/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -236,10 +237,14 @@ func (r *reconciler) updatePdVolumeType(ctx context.Context, node string, info *
 	needCreate := false
 	err := r.Get(ctx, types.NamespacedName{Namespace: r.namespace, Name: node}, &pvc)
 	if apierrors.IsNotFound(err) {
+		storageClass, err := r.getStorageClassForNode(ctx, node)
+		if err != nil {
+			return fmt.Errorf("Cannot get storage class for %s: %w", node, err)
+		}
 		needCreate = true
 		pvc.SetName(node)
 		pvc.SetNamespace(r.namespace)
-		pvc.Spec.StorageClassName = ptr.To(r.pdStorageClass)
+		pvc.Spec.StorageClassName = ptr.To(storageClass)
 		pvc.Spec.VolumeMode = ptr.To(corev1.PersistentVolumeBlock)
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		pvc.Spec.Resources.Requests = map[corev1.ResourceName]resource.Quantity{
@@ -250,6 +255,57 @@ func (r *reconciler) updatePdVolumeType(ctx context.Context, node string, info *
 	}
 
 	return r.updatePVCForLifecycle(ctx, &pvc, needCreate)
+}
+
+func (r *reconciler) getStorageClassForNode(ctx context.Context, nodeName string) (string, error) {
+	var node corev1.Node
+	if err := r.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
+		return "", err
+	}
+	var zone string
+	for label, val := range node.GetLabels() {
+		if label == zoneLabel {
+			zone = val
+			break
+		}
+	}
+	if zone == "" {
+		log.FromContext(ctx).Error(nil, "No node zone label, will use zone-independent storage class. Probably you're running on a non-GKE cluster", "node", nodeName)
+		return r.pdStorageClass, nil
+	}
+	scName := fmt.Sprintf("%s-%s", r.pdStorageClass, zone)
+	var sc storagev1.StorageClass
+	err := r.Get(ctx, types.NamespacedName{Name: scName}, &sc)
+	if apierrors.IsNotFound(err) {
+		if err := r.Get(ctx, types.NamespacedName{Name: r.pdStorageClass}, &sc); err != nil {
+			return "", fmt.Errorf("Cannot get template storage class %s: %w", r.pdStorageClass, err)
+		}
+		// Reset most of object meta to avoid creation errors.
+		sc.ObjectMeta = metav1.ObjectMeta{
+			Name:        scName,
+			Labels:      sc.GetLabels(),
+			Annotations: sc.GetAnnotations(),
+		}
+
+		sc.AllowedTopologies = []corev1.TopologySelectorTerm{
+			{
+				MatchLabelExpressions: []corev1.TopologySelectorLabelRequirement{
+					{
+						Key: zoneLabel,
+						Values: []string{
+							zone,
+						},
+					},
+				},
+			},
+		}
+		if err := r.Create(ctx, &sc); err != nil {
+			return "", fmt.Errorf("Could not create zone-specific storage class %s: %w", scName, err)
+		}
+	} else if err != nil {
+		return "", fmt.Errorf("Could not look up zone-specific storage class %s: %w", scName, err)
+	}
+	return scName, nil
 }
 
 func (r *reconciler) updatePVCForLifecycle(ctx context.Context, pvc *corev1.PersistentVolumeClaim, needCreate bool) error {

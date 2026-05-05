@@ -30,7 +30,7 @@ build-and-push:
 	@if [ -z "$(PROJECT)" ] ; then echo Missing PROJECT; false; fi
 	@if [ -z "$(IMAGE)" ] ; then echo Missing IMAGE; false; fi
 	@if [ -z "$(DOCKERFILE)" ] ; then echo Missing DOCKERFILE; false; fi
-	docker build -t "$(REPO_HOST)/$(PROJECT_REPO)/$(IMAGE):$(TAG)" . --file "$(DOCKERFILE)" $(BUILD_ARGS)
+	docker build -t "$(REPO_HOST)/$(PROJECT_REPO)/$(IMAGE):$(TAG)" . --file "$(DOCKERFILE)" $(BUILD_ARGS) --progress=plain
 	docker push "$(REPO_HOST)/$(PROJECT_REPO)/$(IMAGE):$(TAG)"
 
 setup-kustomize:

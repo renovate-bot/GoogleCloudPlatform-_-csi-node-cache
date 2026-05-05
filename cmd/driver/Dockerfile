@@ -16,12 +16,12 @@
 
 ARG VERSION
 
-FROM golang:1.23 AS builder
+FROM golang:1.26 AS builder
 WORKDIR /src
 COPY . .
 RUN go build -ldflags "-extldflags=static -X main.driverVersion=$VERSION" ./cmd/driver
 
-FROM debian:12 AS debian
+FROM debian:13 AS debian
 # google_nvme_id script depends on the following packages: nvme-cli, xxd, bash
 RUN apt update && apt install -y \
   mount bash mdadm util-linux e2fsprogs nvme-cli xxd
@@ -31,7 +31,7 @@ RUN /usr/bin/ldd /bin/sh
 
 # Since we're leveraging apt to pull in dependencies, we use
 # `gcr.io/distroless/base` because it includes glibc.
-FROM gcr.io/distroless/base-debian12 AS distroless
+FROM gcr.io/distroless/base-debian13 AS distroless
 
 COPY --from=builder /src/driver /
 COPY --from=debian /bin/mount /bin/umount /sbin/mdadm /bin/

@@ -13,19 +13,19 @@
 # limitations under the License.
 
 # This should be build from the repo root.
-FROM golang:1.23 AS builder
+FROM golang:1.26 AS builder
 WORKDIR /src
 COPY . .
 RUN go build -ldflags "-extldflags=static" ./cmd/controller
 
 # I'd like to use gcr.io/distroless/static:latest, but I ran into a
 # weird problem where no executables were found. So I copied the
-# working example from the driver using base-debian12, with the
+# working example from the driver using base-debian13, with the
 # library check flow run to confirm that the images works correctly.
-FROM gcr.io/distroless/base-debian12 AS distroless
+FROM gcr.io/distroless/base-debian13 AS distroless
 COPY --from=builder /src/controller /
 
-FROM debian:12 AS debian
+FROM debian:13 AS debian
 RUN apt update && apt install -y bash
 
 FROM distroless AS check
